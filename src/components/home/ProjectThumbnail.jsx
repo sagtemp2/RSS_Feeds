@@ -1,14 +1,15 @@
 import React from 'react'
 import Button from '../common/Button'
-import {ServerPath} from "../../utils/constants"
-import axios from "axios"
+import {ServerPath} from "../../constants/common"
+import {deleteData} from "../../utils/serviceUtils" 
 
 function ProjectThumbnail({projectObj, setSelectedProject, removeProjectFromList}) {
 
     const handleDeleteClick = (uid) => {
-        axios.delete(`${ServerPath}/projects/delete/${uid}`)
-            .then(res => removeProjectFromList(uid))
-            .catch((err) => console.log(err))
+        let url = `${ServerPath}/projects/delete/${uid}`
+        const successFunc = () => removeProjectFromList(uid)
+        const errFunc = (err) => console.log(err)
+        deleteData(url,successFunc,errFunc)
     } 
 
     return (

@@ -1,21 +1,22 @@
 import Parser from 'rss-parser'
-import {CORS_PROXY} from './constants'
+import {CORS_PROXY} from '../constants/common'
+import {rssFeedParserErrObj} from '../constants/errorMessages/common'
 
 const rssFeedParser = (link) => {
     return new Promise((resolve, reject) => {
         let parser = new Parser();
         parser.parseURL(CORS_PROXY + link.trim(), function(err, feeds) {
             if(err) {
-                reject({error:true, msg: "Link is not valid. Please try other link"}) 
+                reject({error:true, msg: rssFeedParserErrObj.notValid}) 
             }
             if(feeds) {
                 if(feeds.hasOwnProperty("items")) {
                     resolve({feeds: feeds.items})
                 } else {
-                    reject({error: true, msg: "Our application does not support this rss link. Please try for other rss link."}) 
+                    reject({error: true, msg: rssFeedParserErrObj.noSupport}) 
                 }
             }
-            reject({error:true, msg: "Something went wrong."})
+            reject({error:true, msg: rssFeedParserErrObj.somethingWentWrong})
         })
     })
 }

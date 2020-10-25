@@ -2,9 +2,10 @@ import React, {useState, useEffect, useRef} from 'react'
 import './create.css'
 import Button from '../common/Button'
 import useOnClickOutside from "../../hooks/useOnClickOutside"
-import {ServerPath} from "../../utils/constants"
+import {ServerPath} from "../../constants/common"
 import rssFeedParser from "../../utils/rssFeedParser"
-import axios from 'axios'
+import {postData} from "../../utils/serviceUtils"
+import {createModalErrObj} from "../../constants/errorMessages/create"
 
 function CreateModal({toggleCreatePorjectModal, fetchProjects}) {
     const createModalRef = useRef()
@@ -15,40 +16,44 @@ function CreateModal({toggleCreatePorjectModal, fetchProjects}) {
     }
     useOnClickOutside(createModalRef, handleOutsideCreateModalClick)
 
-    const [formObj, setFormObj] = useState({name: "", link: "", error: ""})
+    const [name, setName] = useState("")
+    const [link, setLink] = useState("")
+    const [error, setError] = useState("")
     const handleNameChange = (e) => {
         e.persist();
-        setFormObj(state => ({...state, name: e.target.value}))
+        setName(e.target.value)
     }
 
     const handleLinkChange = (e) => {
         e.persist();
-        setFormObj(state => ({...state, link: e.target.value}))
+        setLink(e.target.value)
     } 
 
     function validateLinkAndCreateProject() {
-            if(formObj.link.trim() === "" || formObj.name.trim() === "") {
-                setFormObj(state => ({...state, error: "ALL fields are mandatory, please enter Project Name and Feed Link to create project."}))
+            if(link.trim() === "" || name.trim() === "") {
+                setError(createModalErrObj.allManditory)
                 return
             }
             
-            rssFeedParser(formObj.link.trim())
+            rssFeedParser(link.trim())
                 .then((res) => {
-                    axios.post(`${ServerPath}/projects/create`, {
-                        name: formObj.name, 
-                        link: formObj.link
-                    })
-                    .then(response => {
+                    let url = `${ServerPath}/projects/create`
+                    let params = {name, link}
+                    const successFunc = response => {
                         if(response.data.error) {
-                            setFormObj(state => ({...state, error: "Something went wrong. Please try again after some time."}))
+                            setError(createModalErrObj.somethingWentWrong)
                         } else {
                             fetchProjects()
                             toggleCreatePorjectModal(false)
-                        }  
-                    })
+                        }
+                    }
+                    const errFunc = err => {
+                        setError(createModalErrObj.somethingWentWrong)
+                    }
+                    postData(url,params,successFunc,errFunc)
                 })
                 .catch((err) => {
-                    setFormObj(state => ({...state, error: err.msg})) 
+                    setError(err.msg) 
                 })
     }
 
@@ -71,7 +76,7 @@ function CreateModal({toggleCreatePorjectModal, fetchProjects}) {
                         <div className="label">Project Name:</div>
                         <div>
                             <input ref={projectNameRef} 
-                                   value={formObj.name} 
+                                   value={name} 
                                    placeholder="Example: New Yorker Feeds" 
                                    onChange={(e) => handleNameChange(e)} />
                             <div className="desc">Enter Project name, for which you are going to setup rss feed. For Example: "New Yorker Feeds"</div>
@@ -80,11 +85,11 @@ function CreateModal({toggleCreatePorjectModal, fetchProjects}) {
                     <div className="create-modal-block">
                         <div className="label">Feed link:</div>
                         <div>
-                            <input value={formObj.link} placeholder="Example: https://www.newyorker.com/feed/humor" onChange={(e) => handleLinkChange(e)}/>
+                            <input value={link} placeholder="Example: https://www.newyorker.com/feed/humor" onChange={(e) => handleLinkChange(e)}/>
                             <div className="desc">Enter feed link, for which you are going to recieve rss feeds. For Example: "https://www.newyorker.com/feed/humor"</div>
                         </div>
                     </div>
-                    <div className={formObj.error?"error":"hidden error"}>{formObj.error? formObj.error : "hidden"}</div>
+                    <div className={error?"error":"hidden error"}>{error? error : "hidden"}</div>
                     <div className="create-modal-button">
                         <Button handleClick={() => validateLinkAndCreateProject()}>Create</Button>
                     </div>

@@ -1,8 +1,8 @@
 import React, {useState, useEffect, useRef} from 'react'
 import './feed.css'
-import Parser from 'rss-parser'
 import Feed from './Feed'
 import useOnClickOutside from "../../hooks/useOnClickOutside"
+import rssFeedParser from "../../utils/rssFeedParser"
 
 function FeedModal({selectedProject, setSelectedProject}) {
     const feedModalRef = useRef()
@@ -13,43 +13,29 @@ function FeedModal({selectedProject, setSelectedProject}) {
     }
     useOnClickOutside(feedModalRef,handleFeedModalOutsideClick)
 
-    const [feedsObj, setfeedsObj] = useState({feeds:[], isLoading: true, errorMsg: "", refresh: 0}) 
+    const [feeds, setFeeds] = useState([])
+    const [isLoading, setLoadingState] =  useState(true)
+    const [errorMsg, setErrorMsg] = useState("")
+    const [refresh, setRefresh] = useState(0)
     useEffect(() => {
-        let parser = new Parser();
-        const CORS_PROXY = "https://cors-anywhere.herokuapp.com/"
-        parser.parseURL(CORS_PROXY + selectedProject.link, function(err, feeds) {
-            if(err) {
-                setfeedsObj(state => ({...state, 
-                            isLoading: false, 
-                            errorMsg: "Something went wrong, please try again after some time."}))
-            }
-            if(feeds) {
-                if(feeds.hasOwnProperty("items")) {
-                    if(feeds.items.length > 0) {
-                        setfeedsObj(state => ({
-                            ...state,
-                            feeds: feeds.items,
-                            isLoading: false,
-                            errorMsg: ""
-                        }))
-                    } else {
-                        setfeedsObj(state => ({
-                            ...state,
-                            feeds: [],
-                            isLoading: false,
-                            errorMsg: `Currently, No Feeds available. Please try again later.`
-                        }))    
-                    }
-                } else {
-                    setfeedsObj(state => ({
-                        ...state,
-                        isLoading: false,
-                        errorMsg: "Our application does not support current rss link. Please try for other rss link."
-                    }))
-                }
-            } 
+        rssFeedParser(selectedProject.link)
+        .then(res => {
+            setFeeds(res.feeds)
+            setLoadingState(false)
+            setErrorMsg("")
+        })
+        .catch((errObj) => {
+            setLoadingState(false)
+            setErrorMsg(errObj.msg)
         })    
-    }, [feedsObj.refresh])
+    }, [refresh])
+
+    const handleRefreshClick = () => {
+        setFeeds([])
+        setLoadingState(true)
+        setErrorMsg("")
+        setRefresh(refresh + 1)
+    }
 
     return  (
         <div className="feed-modal-container" >
@@ -62,18 +48,18 @@ function FeedModal({selectedProject, setSelectedProject}) {
                     </div>
                     <div className="feed-modal-refresh-icon" >
                         <div>
-                            <i class="material-icons" onClick={() => setfeedsObj({...feedsObj, feeds:[], isLoading: true, errorMsg: "", refresh: feedsObj.refresh + 1})}>refresh</i>
+                            <i class="material-icons" onClick={() => handleRefreshClick()}>refresh</i>
                         </div>
                     </div>
                     <div className="feed-modal-title">{selectedProject.name}</div>
-                    {feedsObj.isLoading 
+                    {isLoading 
                         ? <div className="loader"></div>
                         : <React.Fragment>
                           {
-                            feedsObj.errorMsg 
-                                ? <div>{feedsObj.errorMsg}</div>
+                            errorMsg 
+                                ? <div>{errorMsg}</div>
                                 : <div>
-                                    {feedsObj.feeds.map((feed, i) => <Feed key={feed.link ? `${feed.link}-${i}` : i} feed={feed}/>)}
+                                    {feeds.map((feed, i) => <Feed key={feed.link ? `${feed.link}-${i}` : i} feed={feed}/>)}
                                 </div> 
                           }
                           </React.Fragment>
